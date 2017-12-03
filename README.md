@@ -9,7 +9,7 @@ import FixedPolynomials
 const FP = FixedPolynomials
 using BenchmarkTools
 
-# We have 25 variables
+# We have 24 variables
 N = 24
 # with 20 terms
 M = 20
