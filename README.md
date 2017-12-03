@@ -22,7 +22,7 @@ w = rand(N)
 
 f = FP.Polynomial(exponents, coefficients)
 cfg = FP.GradientConfig(f)
-# @btime SP.horner($g, $w)
+
 @btime SP.evaluate($g, $w) # 130.837 ns (0 allocations: 0 bytes)
 @btime FP.evaluate($f, $w, $cfg) # 1.580 μs (0 allocations: 0 bytes)
 ```
