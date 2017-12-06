@@ -40,6 +40,18 @@ module SuperPolynomials
         f_exponents, f_coefficients
     end
 
+    function revlexless(a, b)
+        n = length(a)
+        for j=n:-1:1
+            if a[j] > b[j]
+                return false
+            elseif a[j] < b[j]
+                return true
+            end
+        end
+        return false
+    end
+
 
     function exponents(::SuperPolynomial{T, NVars, NTerms, Val{Exponents}}) where {T, NVars, NTerms, Exponents}
         convert_to_matrix(NVars, NTerms, Exponents)
@@ -75,6 +87,393 @@ module SuperPolynomials
         end
         return y
     end
+
+
+    function group_powers(M::Matrix, NVars)
+        _xs = []
+        for i=1:NVars
+            i_exps = sort!(unique(M[i,:]))
+            if first(i_exps) == 0
+                shift!(i_exps)
+            end
+            if !isempty(i_exps)
+                last_k = first(i_exps)
+                xi = Symbol("_x", i)
+                push!(_xs, :($xi = x[$i]))
+                last_xik = Symbol("_x", i, "_", last_k)
+                if last_k > 1
+                    push!(_xs, :($last_xik = pow($xi, $last_k)))
+                else
+                    push!(_xs, :($last_xik = $xi))
+                end
+                for k in Iterators.drop(i_exps, 1)
+                    xik = Symbol("_x", i, "_",k)
+                    if (k - last_k) > 1
+                        push!(_xs, :($xik = $last_xik * pow($xi, $(k - last_k))))
+                    else
+                        push!(_xs, :($xik = $last_xik * $xi))
+                    end
+                    last_k = k
+                    last_xik = xik
+                end
+            end
+        end
+        return _xs
+    end
+
+    function gradient_impl(u, f::Type{SuperPolynomial{T, NVars, NTerms, Val{Exponents}}}, x) where {T, NVars, NTerms, Exponents}
+        M = convert_to_matrix(NVars, NTerms, Exponents)
+
+        _xs = []
+        for i=1:NVars
+            i_unique_exps = unique(M[i,:])
+            i_exps = sort!(unique(max.(i_unique_exps .- 1, 0)))
+            if first(i_exps) == 0
+                shift!(i_exps)
+            end
+            if !isempty(i_exps)
+                last_k = first(i_exps)
+                xi = Symbol("x", i)
+                push!(_xs, :($xi = x[$i]))
+                last_xik = Symbol("x", i, "_", last_k)
+                if last_k > 1
+                    push!(_xs, :($last_xik = pow($xi, $last_k)))
+                else
+                    push!(_xs, :($last_xik = $xi))
+                end
+                for k in Iterators.drop(i_exps, 1)
+                    xik = Symbol("x", i, "_",k)
+                    if (k - last_k) > 1
+                        push!(_xs, :($xik = $last_xik * pow($xi, $(k - last_k))))
+                    else
+                        push!(_xs, :($xik = $last_xik * $xi))
+                    end
+                    last_k = k
+                    last_xik = xik
+                end
+            end
+        end
+
+        as = []
+        push!(as, :(u .= zero($T)))
+        # end
+        for j=1:NTerms
+            c = :(f.coefficients[$j])
+
+            E = M[:, j]
+            # we compute the common factor to all partial derivatives
+            for (i, k) in enumerate(max.(E .- 1, 0))
+                if k > 0
+                    xik = Symbol("x", i, "_", k)
+                    c = :($c * $xik)
+                end
+            end
+            push!(as, :(c = $c))
+            for i=1:NVars
+                if M[i, j] > 0
+                    f_i = :(c * $(M[i, j]))
+
+                    for l=1:NVars
+                        if l == i || M[l, j] == 0
+                            continue
+                        end
+                        xl = Symbol("x", l)
+                        f_i = :($f_i * $xl)
+                    end
+                    push!(as, :(u[$i] += $f_i))
+                end
+            end
+        end
+
+        return Expr(:block, _xs..., as..., :u)
+    end
+
+
+    function eval_and_gradient_impl(u, f::Type{SuperPolynomial{T, NVars, NTerms, Val{Exponents}}}, x) where {T, NVars, NTerms, Exponents}
+        M = convert_to_matrix(NVars, NTerms, Exponents)
+
+        _xs = []
+        for i=1:NVars
+            i_unique_exps = unique(M[i,:])
+            i_exps = sort!(unique(max.(i_unique_exps .- 1, 0)))
+            if first(i_exps) == 0
+                shift!(i_exps)
+            end
+            if !isempty(i_exps)
+                last_k = first(i_exps)
+                xi = Symbol("x", i)
+                push!(_xs, :($xi = x[$i]))
+                last_xik = Symbol("x", i, "_", last_k)
+                if last_k > 1
+                    push!(_xs, :($last_xik = pow($xi, $last_k)))
+                else
+                    push!(_xs, :($last_xik = $xi))
+                end
+                for k in Iterators.drop(i_exps, 1)
+                    xik = Symbol("x", i, "_",k)
+                    if (k - last_k) > 1
+                        push!(_xs, :($xik = $last_xik * pow($xi, $(k - last_k))))
+                    else
+                        push!(_xs, :($xik = $last_xik * $xi))
+                    end
+                    last_k = k
+                    last_xik = xik
+                end
+            end
+        end
+
+        as = []
+        push!(as, :(out = zero($T)))
+        push!(as, :(u .= zero($T)))
+        # end
+        for j=1:NTerms
+            c = :(f.coefficients[$j])
+
+            E = M[:, j]
+            # we compute the common factor to all partial derivatives
+            for (i, k) in enumerate(max.(E .- 1, 0))
+                if k > 0
+                    xik = Symbol("x", i, "_", k)
+                    c = :($c * $xik)
+                end
+            end
+            push!(as, :(c = $c))
+            push!(as, :(out_term = c))
+            for i=1:NVars
+
+                if M[i, j] > 0
+                    xi = Symbol("x", i)
+                    push!(as, :(out_term *= $xi))
+                    f_i = :(c * $(M[i, j]))
+
+                    for l=1:NVars
+                        if l == i || M[l, j] == 0
+                            continue
+                        end
+                        xl = Symbol("x", l)
+                        f_i = :($f_i * $xl)
+                    end
+                    push!(as, :(u[$i] += $f_i))
+                end
+            end
+            push!(as, :(out += out_term))
+        end
+
+        return Expr(:block, _xs..., as..., :out)
+    end
+
+
+    @generated function gradient5!(u::AbstractVector, f::SuperPolynomial{T, NVars, NTerms, Val{Exponents}}, x) where {T, NVars, NTerms, Exponents}
+        gradient_impl(u, f, x)
+    end
+
+    @generated function eval_and_gradient!(u::AbstractVector, f::SuperPolynomial{T, NVars, NTerms, Val{Exponents}}, x) where {T, NVars, NTerms, Exponents}
+        eval_and_gradient_impl(u, f, x)
+    end
+
+    function gradient_alloc_impl(u, f::Type{SuperPolynomial{T, NVars, NTerms, Val{Exponents}}}, x) where {T, NVars, NTerms, Exponents}
+        M = convert_to_matrix(NVars, NTerms, Exponents)
+
+        _xs = []
+        for i=1:NVars
+            i_unique_exps = unique(M[i,:])
+            i_exps = sort!(unique(max.(i_unique_exps .- 1, 0)))
+            if first(i_exps) == 0
+                shift!(i_exps)
+            end
+            xi = Symbol("x", i)
+            push!(_xs, :($xi = x[$i]))
+            if !isempty(i_exps)
+                last_k = first(i_exps)
+                last_xik = Symbol("x", i, "_", last_k)
+                if last_k > 1
+                    push!(_xs, :($last_xik = pow($xi, $last_k)))
+                else
+                    push!(_xs, :($last_xik = $xi))
+                end
+                for k in Iterators.drop(i_exps, 1)
+                    xik = Symbol("x", i, "_",k)
+                    if (k - last_k) > 1
+                        push!(_xs, :($xik = $last_xik * pow($xi, $(k - last_k))))
+                    else
+                        push!(_xs, :($xik = $last_xik * $xi))
+                    end
+                    last_k = k
+                    last_xik = xik
+                end
+            end
+        end
+
+        as = []
+        push!(as, :(u .= zero($T)))
+        # end
+        for j=1:NTerms
+            ops = []
+            push!(ops, :(f.coefficients[$j]))
+
+
+            E = M[:, j]
+            # we compute the common factor to all partial derivatives
+            for (i, k) in enumerate(max.(E .- 1, 0))
+                if k > 0
+                    push!(ops, :($(Symbol("x", i, "_", k))))
+                end
+            end
+            if length(ops) > 1
+                c = Expr(:call, :*, ops...)
+            else
+                c = :($(first(ops)))
+            end
+            push!(as, :(c = $c))
+
+
+            is_first = true
+            last_xi = :default
+            for i=1:NVars-1
+                if M[i, j] > 0
+                    _xi = Symbol("_x", i)
+                    xi = Symbol("x", i)
+                    if is_first
+                        if i == 1
+                            push!(as, :($_xi = $xi))
+                        else
+                            factors = Symbol[]
+                            for l=1:i
+                                 if M[l, j] > 0
+                                     push!(factors, Symbol("x", l))
+                                 end
+                            end
+                            if length(factors) > 1
+                                e = Expr(:call, :*, factors...)
+                                push!(as, :($_xi = $e))
+                            else
+                                push!(as, :($_xi = $(factors[1])))
+                            end
+
+                        end
+                        is_first = false
+                    else
+                        push!(as, :($_xi = $last_xi * $xi))
+                    end
+                    last_xi = _xi
+                end
+            end
+
+            is_first = true
+            last_yi = :default
+            for i=NVars:-1:2
+                if M[i, j] > 0
+                    _yi = Symbol("_y", i)
+                    xi = Symbol("x", i)
+                    if is_first
+                        if i == NVars
+                            push!(as, :($_yi = $xi))
+                        else
+                            factors = Symbol[]
+                            for l=NVars:-1:i
+                                 if M[l, j] > 0
+                                     push!(factors, Symbol("x", l))
+                                 end
+                            end
+                            if length(factors) > 1
+                                e = Expr(:call, :*, factors...)
+                                push!(as, :($_yi = $e))
+                            else
+                                push!(as, :($_yi = $(factors[1])))
+                            end
+
+                        end
+                        is_first = false
+                    else
+                        push!(as, :($_yi = $last_yi * $xi))
+                    end
+                    last_yi = _yi
+                end
+            end
+
+            nonzero_term_exps = Vector{NTuple{2, Int}}()
+            for i=1:NVars
+                k = M[i, j]
+                if k > 0
+                    push!(nonzero_term_exps, (i, k))
+                end
+            end
+            for l = 1:length(nonzero_term_exps)
+                (i, k) = nonzero_term_exps[l]
+                ops = Any[:c]
+                if k > 1
+                    push!(ops, :($k))
+                end
+                if l > 1
+                    _xi = Symbol("_x", nonzero_term_exps[l-1][1])
+                    push!(ops, _xi)
+                end
+                if l < length(nonzero_term_exps)
+                    _yi = Symbol("_y", nonzero_term_exps[l+1][1])
+                    push!(ops, _yi)
+                end
+                if length(ops) == 2
+                    push!(as, :(u[$i] = muladd($(ops[1]), $(ops[2]), u[$i])))
+                elseif length(ops) == 1
+                    push!(as, :(u[$i] += $(ops[1])))
+                else
+                    a = Expr(:call, :*, ops[1:end-1]...)
+                    b = ops[end]
+                    push!(as, :(u[$i] = muladd($a, $b, u[$i]))) # if M[i, j] > 0
+                end
+            end
+        end
+
+        return Expr(:block, _xs..., as..., :u)
+    end
+
+
+    @generated function gradient_alloc!(u::AbstractVector, f::SuperPolynomial{T, NVars, NTerms, Val{Exponents}}, x) where {T, NVars, NTerms, Exponents}
+        gradient_alloc_impl(u, f, x)
+    end
+
+
+
+    function evaluate_impl(f::Type{SuperPolynomial{T, NVars, NTerms, Val{Exponents}}}, x) where {T, NVars, NTerms, Exponents}
+        M = convert_to_matrix(NVars, NTerms, Exponents)
+
+        _xs = group_powers(M, NVars)
+
+        as = []
+        for j = 1:NTerms
+            # aj = Symbol("a", j)
+            a = :(f.coefficients[$j])
+            nmultiplications = sum(M[:, j] .> 0)
+            mult_counter = 0
+            if nmultiplications == 0
+                push!(as, :(sum += $a))
+            else
+                for i=1:NVars
+                    k = M[i, j]
+                    if k > 0
+                        mult_counter += 1
+                        xik = Symbol("_x", i, "_", k)
+                        if mult_counter == nmultiplications
+                            push!(as, :(@inbounds sum = muladd($a, $xik, sum)))
+                        else
+                            a = :($a * $xik)
+                        end
+                    end
+                end
+            end
+        end
+
+        Expr(:block,
+            _xs...,
+            :(sum = zero($T)),
+            as...,
+            :(sum))
+    end
+
+    @generated function evaluate(f::SuperPolynomial{T, NVars, NTerms, Val{Exponents}}, x) where {T, NVars, NTerms, Exponents}
+        evaluate_impl(f, x)
+    end
+
 
     function revlexless(a, b)
         n = length(a)
@@ -261,132 +660,5 @@ module SuperPolynomials
             Expr(:call, :+, :r0, r...))
     end
 
-    function evaluate_impl(f::SuperPolynomial{T, NVars, NTerms, Val{Exponents}}, x) where {T, NVars, NTerms, Exponents}
-        M = convert_to_matrix(NVars, NTerms, Exponents)
-
-        _xs = []
-        for i=1:NVars
-            i_exps = sort!(unique(M[i,:]))
-            if first(i_exps) == 0
-                shift!(i_exps)
-            end
-            if !isempty(i_exps)
-                last_k = first(i_exps)
-                xi = Symbol("_x", i)
-                push!(_xs, :($xi = x[$i]))
-                last_xik = Symbol("_x", i, "_", last_k)
-                if last_k > 1
-                    push!(_xs, :($last_xik = pow($xi, $last_k)))
-                else
-                    push!(_xs, :($last_xik = $xi))
-                end
-                for k in Iterators.drop(i_exps, 1)
-                    xik = Symbol("_x", i, "_",k)
-                    if (k - last_k) > 1
-                        push!(_xs, :($xik = $last_xik * pow($xi, $(k - last_k))))
-                    else
-                        push!(_xs, :($xik = $last_xik * $xi))
-                    end
-                    last_k = k
-                    last_xik = xik
-                end
-            end
-        end
-
-        as = []
-        for j = 1:NTerms
-            # aj = Symbol("a", j)
-            a = :(f.coefficients[$j])
-            nmultiplications = sum(M[:, j] .> 0)
-            mult_counter = 0
-            if nmultiplications == 0
-                push!(as, :(sum += $a))
-            else
-                for i=1:NVars
-                    k = M[i, j]
-                    if k > 0
-                        mult_counter += 1
-                        xik = Symbol("_x", i, "_", k)
-                        if mult_counter == nmultiplications
-                            push!(as, :(@inbounds sum = muladd($a, $xik, sum)))
-                        else
-                            a = :($a * $xik)
-                        end
-                    end
-                end
-            end
-
-        end
-
-        Expr(:block,
-            _xs...,
-            :(sum = zero($T)),
-            as...,
-            :(sum))
-    end
-
-    @generated function evaluate(f::SuperPolynomial{T, NVars, NTerms, Val{Exponents}}, x) where {T, NVars, NTerms, Exponents}
-        M = convert_to_matrix(NVars, NTerms, Exponents)
-
-        _xs = []
-        for i=1:NVars
-            i_exps = sort!(unique(M[i,:]))
-            if first(i_exps) == 0
-                shift!(i_exps)
-            end
-            if !isempty(i_exps)
-                last_k = first(i_exps)
-                xi = Symbol("_x", i)
-                push!(_xs, :($xi = x[$i]))
-                last_xik = Symbol("_x", i, "_", last_k)
-                if last_k > 1
-                    push!(_xs, :($last_xik = pow($xi, $last_k)))
-                else
-                    push!(_xs, :($last_xik = $xi))
-                end
-                for k in Iterators.drop(i_exps, 1)
-                    xik = Symbol("_x", i, "_", k)
-                    if (k - last_k) > 1
-                        push!(_xs, :($xik = $last_xik * pow($xi, $(k - last_k))))
-                    else
-                        push!(_xs, :($xik = $last_xik * $xi))
-                    end
-                    last_k = k
-                    last_xik = xik
-                end
-            end
-        end
-
-        as = []
-        for j = 1:NTerms
-            # aj = Symbol("a", j)
-            a = :(f.coefficients[$j])
-            nmultiplications = sum(M[:, j] .> 0)
-            mult_counter = 0
-            if nmultiplications == 0
-                push!(as, :(sum += $a))
-            else
-                for i=1:NVars
-                    k = M[i, j]
-                    if k > 0
-                        mult_counter += 1
-                        xik = Symbol("_x", i, "_", k)
-                        if mult_counter == nmultiplications
-                            push!(as, :(sum = muladd($a, $xik, sum)))
-                        else
-                            a = :($a * $xik)
-                        end
-                    end
-                end
-            end
-
-        end
-
-        Expr(:block,
-            _xs...,
-            :(sum = zero($T)),
-            as...,
-            :(sum))
-    end
 
 end # module
