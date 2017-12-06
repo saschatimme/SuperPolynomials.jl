@@ -2,6 +2,7 @@ using SuperPolynomials
 using Base.Test
 import FixedPolynomials
 const FP = FixedPolynomials
+import DynamicPolynomials: @polyvar
 # write your own tests here
 
 @testset "Evaluate, horner, gradient!" begin
@@ -31,4 +32,17 @@ const FP = FixedPolynomials
             @test all(0 .≈ V[1,:])
         end
     end
+end
+
+@testset "Constructors" begin
+    @polyvar x y z
+
+    f = SuperPolynomial(3.0 * x * y * z^3 - 2x^2*z)
+    @test exponents(f) == [1 2; 1 0; 3 1]
+
+    g = SuperPolynomial(3.0 * x * z^3 - 2x^2*z, [x, y, z])
+    @test exponents(g) == [1 2; 0 0; 3 1]
+
+    h = SuperPolynomial(FP.Polynomial{Complex128}(3.0 * x * y * z^3 - 2x^2*z))
+    @test exponents(h) == [1 2; 1 0; 3 1]
 end

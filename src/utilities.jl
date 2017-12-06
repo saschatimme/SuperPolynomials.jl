@@ -1,5 +1,24 @@
+function mp_exponents_coefficients(poly::MP.AbstractPolynomialLike{T}, vars) where T
+    terms = MP.terms(poly)
+    nterms = length(terms)
+    nvars = length(vars)
+    exps = Vector{Vector{Int}}(nterms)
+    coefficients = Vector{T}(nterms)
+    for j = 1:nterms
+        term = terms[j]
+        coefficients[j] = MP.coefficient(term)
+        exps[j] = [MP.degree(term, vars[i]) for i=1:nvars]
+    end
+    normalize_exponents_coeffs(exps, coefficients)
+end
+
 function normalize_exponents_coeffs(exponents::Matrix, coefficients::AbstractVector{T}) where T
+    @assert length(coefficients) == size(exponents, 2)
     E = [exponents[:,j] for j=1:size(exponents, 2)]
+    normalize_exponents_coeffs(E, coefficients)
+end
+
+function normalize_exponents_coeffs(E::Vector{Vector{Int}}, coefficients::AbstractVector{T}) where T
     P = sortperm(E, lt=revlexless, rev=true)
     f_exponents = Vector{Int}()
     f_coefficients = Vector{T}()
@@ -35,9 +54,6 @@ function revlexless(a, b)
     return false
 end
 
-function exponents(::SuperPolynomial{T, NVars, NTerms, Val{Exponents}}) where {T, NVars, NTerms, Exponents}
-    convert_to_matrix(NVars, NTerms, Exponents)
-end
 
 function convert_to_matrix(nvars, nterms, exponents)
     [exponents[nvars*(j - 1) + i] for i=1:nvars, j=1:nterms]
