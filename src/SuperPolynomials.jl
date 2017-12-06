@@ -33,12 +33,12 @@ module SuperPolynomials
 
     SuperPolynomial(p::FP.Polynomial) = SuperPolynomial(p.coefficients, p.exponents)
 
-
+    include("promotion_conversion.jl")
     include("utilities.jl")
     include("evaluate.jl")
     include("horner.jl")
     include("gradient.jl")
-
+    include("system.jl")
 
     export exponents
 
@@ -57,17 +57,21 @@ module SuperPolynomials
 
     Get the coefficients of `f`.
     """
-    function coefficients(f::SuperPolynomial{T, NVars, NTerms, Val{Exponents}}) where {T, NVars, NTerms, Exponents}
-        f.coefficients
-    end
+    coefficients(f::SuperPolynomial) = f.coefficients
 
     """
         scale_coefficients!(f, λ)
 
-    Get the coefficients of `f`.
+    Scale the coefficients of `f` with the factor `λ`.
     """
-    function scale_coefficients!(f::SuperPolynomial{T, NVars, NTerms, Val{Exponents}}, λ) where {T, NVars, NTerms, Exponents}
+    function scale_coefficients!(f::SuperPolynomial, λ)
         scale!(f.coefficients, λ)
         f
+    end
+    function scale_coefficients!(F::SuperPolynomialSystem, λ)
+        for f in F.polynomials
+            scale!(f.coefficients, λ)
+        end
+        F
     end
 end

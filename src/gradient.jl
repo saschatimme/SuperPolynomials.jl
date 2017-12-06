@@ -146,7 +146,7 @@ Compute the gradient of `f` at `x`, i.e. `∇f(x)`, and store the result in `u`.
     gradient!(U::Matrix, f, x, i)
 
 Compute the gradient of `f` at `x`, i.e. `∇f(x)`, and store the result in the
-`i`-th row of `U`.
+`i`-th row of ``.
 """
 @generated function gradient!(u::AbstractMatrix, f::SuperPolynomial{T, NVars, NTerms, Val{Exponents}}, x, row) where {T, NVars, NTerms, Exponents}
     gradient_impl(f, true)

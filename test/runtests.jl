@@ -32,6 +32,21 @@ import DynamicPolynomials: @polyvar
             @test all(0 .≈ V[1,:])
         end
     end
+
+    # cases which occured
+    @polyvar x y z
+    g = SuperPolynomial(x^2+z^2-y)
+
+    u = zeros(3)
+    v = zeros(3)
+    w = rand(3)
+    gradient!(u, g, w)
+
+    f = FP.Polynomial{Float64}(x^2+z^2-y)
+    cfg = FP.GradientConfig(f)
+    FP.gradient!(v, f, w, cfg)
+
+    @test all(u .≈ v)
 end
 
 @testset "Constructors" begin
@@ -45,4 +60,30 @@ end
 
     h = SuperPolynomial(FP.Polynomial{Complex128}(3.0 * x * y * z^3 - 2x^2*z))
     @test exponents(h) == [1 2; 1 0; 3 1]
+end
+
+@testset "System" begin
+    @polyvar x y z
+    f = [x^2+z^2-y, x^2+y]
+    F = SuperPolynomialSystem(f)
+    F1 = convert(Vector{FP.Polynomial{Float64}}, f)
+    cfg = FP.JacobianConfig(F1)
+
+    evaluate! = genevaluate!(F)
+    jacobian! = genjacobian!(F)
+
+    w = rand(3)
+
+    U = zeros(2, 3)
+    V = zeros(2, 3)
+    u = zeros(2)
+    v = zeros(2)
+
+    evaluate!(u, w)
+    FP.evaluate!(v, F1, w, cfg)
+    jacobian!(U, w)
+    FP.jacobian!(V, F1, w, cfg)
+
+    @test all(u .≈ v)
+    @test all(U .≈ V)
 end

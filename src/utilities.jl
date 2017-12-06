@@ -115,10 +115,10 @@ function group_powers(M::Matrix, NVars)
         if first(i_exps) == 0
             shift!(i_exps)
         end
+        xi = Symbol("x", i)
+        push!(_xs, :($xi = x[$i]))
         if !isempty(i_exps)
             last_k = first(i_exps)
-            xi = Symbol("x", i)
-            push!(_xs, :($xi = x[$i]))
             last_xik = Symbol("x", i, "_", last_k)
             p = static_pow(xi, last_k)
             push!(_xs, :($last_xik = $p))
