@@ -13,7 +13,7 @@ import DynamicPolynomials: @polyvar
             exponents = round.(Int, 4 * rand(N, M))
             # some random coefficients
             coefficients = rand(T, M)
-            g = SuperPolynomial(coefficients, exponents)
+            g = Polynomial(coefficients, exponents)
             w = rand(T, N)
             f = FP.Polynomial(exponents, coefficients)
             cfg = FP.GradientConfig(f)
@@ -35,7 +35,7 @@ import DynamicPolynomials: @polyvar
 
     # cases which occured
     @polyvar x y z
-    g = SuperPolynomial(x^2+z^2-y)
+    g = Polynomial(x^2+z^2-y)
 
     u = zeros(3)
     v = zeros(3)
@@ -52,20 +52,20 @@ end
 @testset "Constructors" begin
     @polyvar x y z
 
-    f = SuperPolynomial(3.0 * x * y * z^3 - 2x^2*z)
+    f = Polynomial(3.0 * x * y * z^3 - 2x^2*z)
     @test exponents(f) == [1 2; 1 0; 3 1]
 
-    g = SuperPolynomial(3.0 * x * z^3 - 2x^2*z, [x, y, z])
+    g = Polynomial(3.0 * x * z^3 - 2x^2*z, [x, y, z])
     @test exponents(g) == [1 2; 0 0; 3 1]
 
-    h = SuperPolynomial(FP.Polynomial{Complex128}(3.0 * x * y * z^3 - 2x^2*z))
+    h = Polynomial(FP.Polynomial{Complex128}(3.0 * x * y * z^3 - 2x^2*z))
     @test exponents(h) == [1 2; 1 0; 3 1]
 end
 
 @testset "System" begin
     @polyvar x y z
     f = [x^2+z^2-y, x^2+y]
-    F = SuperPolynomialSystem(f)
+    F = PolynomialSystem(f)
     F1 = convert(Vector{FP.Polynomial{Float64}}, f)
     cfg = FP.JacobianConfig(F1)
 

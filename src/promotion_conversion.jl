@@ -1,10 +1,10 @@
-function promote_rule(::Type{S}, ::Type{SuperPolynomial{T, NV, NT, E}}) where {S<:Number, T, NV, NT, E}
-    SuperPolynomial{promote_type(S, T), NV, NT, E}
+function promote_rule(::Type{S}, ::Type{Polynomial{T, NV, NT, E}}) where {S<:Number, T, NV, NT, E}
+    Polynomial{promote_type(S, T), NV, NT, E}
 end
-function promote_rule(::Type{SuperPolynomial{S, NV, NT, E}}, ::Type{SuperPolynomial{T, NV, NT, E}}) where {S<:Number, T, NV, NT, E}
-    SuperPolynomial{promote_type(S, T), NV, NT, E}
+function promote_rule(::Type{Polynomial{S, NV, NT, E}}, ::Type{Polynomial{T, NV, NT, E}}) where {S<:Number, T, NV, NT, E}
+    Polynomial{promote_type(S, T), NV, NT, E}
 end
 
-function convert(::Type{SuperPolynomial{S, NV, NT, E}}, f::SuperPolynomial{T, NV, NT, E}) where {S, T, NV, NT, E}
-    SuperPolynomial{S, NV, NT, E}(convert.(S, f.coefficients))
+function convert(::Type{Polynomial{S, NV, NT, E}}, f::Polynomial{T, NV, NT, E}) where {S, T, NV, NT, E}
+    Polynomial{S, NV, NT, E}(convert.(S, f.coefficients))
 end

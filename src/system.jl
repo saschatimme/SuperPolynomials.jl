@@ -1,34 +1,34 @@
-export SuperPolynomialSystem, genevaluate!, genjacobian!
+export PolynomialSystem, genevaluate!, genjacobian!
 
 """
-    SuperPolynomialSystem([T, ], F::Vector{<:MP.AbstractPolynomialLike})
+    PolynomialSystem([T, ], F::Vector{<:MP.AbstractPolynomialLike})
 
 Construct a system of SuperPolynomials.
 
-    SuperPolynomialSystem([T, ], F::Vector{<:FP.Polynomial})
+    PolynomialSystem([T, ], F::Vector{<:FP.Polynomial})
 """
-struct SuperPolynomialSystem{T}
-    polynomials::Vector{SuperPolynomial{T, N, NTerms, Exponents} where Exponents where NTerms where N}
+struct PolynomialSystem{T}
+    polynomials::Vector{Polynomial{T, N, NTerms, Exponents} where Exponents where NTerms where N}
 end
 
-function SuperPolynomialSystem(ps::Vector{P}) where {T, N, P<:SuperPolynomial{T, N}}
+function PolynomialSystem(ps::Vector{P}) where {T, N, P<:Polynomial{T, N}}
     @assert !isempty(ps) "The system cannot be empty"
     @assert length(ps) < 129 "Currently only systems of up to 128 polynomials are supported."
-    SuperPolynomialSystem{T}(ps)
+    PolynomialSystem{T}(ps)
 end
 
-function SuperPolynomialSystem(ps::Vector{<:MP.AbstractPolynomialLike})
+function PolynomialSystem(ps::Vector{<:MP.AbstractPolynomialLike})
     variables = sort!(union(Iterators.flatten(MP.variables.(ps))), rev=true)
-    SuperPolynomialSystem([SuperPolynomial(p, variables) for p in ps])
+    PolynomialSystem([Polynomial(p, variables) for p in ps])
 end
 
-function SuperPolynomialSystem(ps::Vector{<:FP.Polynomial})
-    SuperPolynomialSystem([SuperPolynomial(p) for p in ps])
+function PolynomialSystem(ps::Vector{<:FP.Polynomial})
+    PolynomialSystem([Polynomial(p) for p in ps])
 end
 
-function SuperPolynomialSystem(::Type{T}, ps::Vector{<:MP.AbstractPolynomialLike}) where T
+function PolynomialSystem(::Type{T}, ps::Vector{<:MP.AbstractPolynomialLike}) where T
     variables = sort!(union(Iterators.flatten(MP.variables.(ps))), rev=true)
-    SuperPolynomialSystem([SuperPolynomial(T, p, variables) for p in ps])
+    PolynomialSystem([Polynomial(T, p, variables) for p in ps])
 end
 
 
@@ -53,20 +53,20 @@ for N = 1:128
 end
 
 """
-    genevaluate!(F::SuperPolynomialSystem)
+    genevaluate!(F::PolynomialSystem)
 
 Generate an evaluation function `(u, x) ->  u .= F(x)` for the polynomial system `F`.
 """
-function genevaluate!(ps::SuperPolynomialSystem)
+function genevaluate!(ps::PolynomialSystem)
     genevaluate!(ps.polynomials...)
 end
 
 """
-    genevaluate!(F::SuperPolynomialSystem)
+    genevaluate!(F::PolynomialSystem)
 
 Generate an evaluation function `(u, x) ->  u .= J_F(x)` for the Jacobian of the
 polynomial system `F`.
 """
-function genjacobian!(ps::SuperPolynomialSystem)
+function genjacobian!(ps::PolynomialSystem)
     genjacobian!(ps.polynomials...)
 end

@@ -57,7 +57,7 @@ function grouped_derivative_factors!(as, M, NVars, j)
     return as
 end
 
-function gradient_impl(f::Type{SuperPolynomial{T, NVars, NTerms, Val{Exponents}}}, matrix_assignement) where {T, NVars, NTerms, Exponents}
+function gradient_impl(f::Type{Polynomial{T, NVars, NTerms, Val{Exponents}}}, matrix_assignement) where {T, NVars, NTerms, Exponents}
     M = convert_to_matrix(NVars, NTerms, Exponents)
     M_reduced = max.(M .- 1, 0)
 
@@ -148,10 +148,10 @@ Compute the gradient of `f` at `x`, i.e. `∇f(x)`, and store the result in `u`.
 Compute the gradient of `f` at `x`, i.e. `∇f(x)`, and store the result in the
 `i`-th row of ``.
 """
-@generated function gradient!(u::AbstractMatrix, f::SuperPolynomial{T, NVars, NTerms, Val{Exponents}}, x, row) where {T, NVars, NTerms, Exponents}
+@generated function gradient!(u::AbstractMatrix, f::Polynomial{T, NVars, NTerms, Val{Exponents}}, x, row) where {T, NVars, NTerms, Exponents}
     gradient_impl(f, true)
 end
 
-@generated function gradient!(u::AbstractVector, f::SuperPolynomial{T, NVars, NTerms, Val{Exponents}}, x) where {T, NVars, NTerms, Exponents}
+@generated function gradient!(u::AbstractVector, f::Polynomial{T, NVars, NTerms, Val{Exponents}}, x) where {T, NVars, NTerms, Exponents}
     gradient_impl(f, false)
 end

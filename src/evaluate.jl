@@ -1,6 +1,6 @@
 export evaluate
 
-function evaluate_impl(f::Type{SuperPolynomial{T, NVars, NTerms, Val{Exponents}}}) where {T, NVars, NTerms, Exponents}
+function evaluate_impl(f::Type{Polynomial{T, NVars, NTerms, Val{Exponents}}}) where {T, NVars, NTerms, Exponents}
     M = convert_to_matrix(NVars, NTerms, Exponents)
 
     grouped_powers = group_powers(M, NVars)
@@ -36,6 +36,7 @@ function evaluate_impl(f::Type{SuperPolynomial{T, NVars, NTerms, Val{Exponents}}
         :(out))
 end
 
-@generated function evaluate(f::SuperPolynomial{T, NVars, NTerms, Val{Exponents}}, x) where {T, NVars, NTerms, Exponents}
+@generated function evaluate(f::Polynomial{T, NVars, NTerms, Val{Exponents}}, x) where {T, NVars, NTerms, Exponents}
     evaluate_impl(f)
 end
+Polynomial

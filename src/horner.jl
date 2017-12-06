@@ -42,7 +42,7 @@ function lower_set(E)
 end
 
 
-function horner_impl(f::Type{SuperPolynomial{T, NVars, NTerms, Val{Exponents}}}) where {T, NVars, NTerms, Exponents}
+function horner_impl(f::Type{Polynomial{T, NVars, NTerms, Val{Exponents}}}) where {T, NVars, NTerms, Exponents}
     matrix = convert_to_matrix(NVars, NTerms, Exponents)
     E = [matrix[:,j] for j=1:NTerms]
     P = sortperm(E, lt=revlexless, rev=true)
@@ -185,6 +185,6 @@ J. Peña[^1].
 
 [^1]: Peña, Juan Manuel. "On the multivariate Horner scheme." SIAM journal on numerical analysis 37.4 (2000): 1186-1197.
 """
-@generated function evalhorner(f::SuperPolynomial{T, NVars, NTerms, Val{Exponents}}, x) where {T, NVars, NTerms, Exponents}
+@generated function evalhorner(f::Polynomial{T, NVars, NTerms, Val{Exponents}}, x) where {T, NVars, NTerms, Exponents}
     horner_impl(f)
 end
