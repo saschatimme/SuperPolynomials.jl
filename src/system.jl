@@ -1,5 +1,12 @@
 export SuperPolynomialSystem, genevaluate!, genjacobian!
 
+"""
+    SuperPolynomialSystem([T, ], F::Vector{<:MP.AbstractPolynomialLike})
+
+Construct a system of SuperPolynomials.
+
+    SuperPolynomialSystem([T, ], F::Vector{<:FP.Polynomial})
+"""
 struct SuperPolynomialSystem{T}
     polynomials::Vector{SuperPolynomial{T, N, NTerms, Exponents} where Exponents where NTerms where N}
 end
@@ -13,6 +20,15 @@ end
 function SuperPolynomialSystem(ps::Vector{<:MP.AbstractPolynomialLike})
     variables = sort!(union(Iterators.flatten(MP.variables.(ps))), rev=true)
     SuperPolynomialSystem([SuperPolynomial(p, variables) for p in ps])
+end
+
+function SuperPolynomialSystem(ps::Vector{<:FP.Polynomial})
+    SuperPolynomialSystem([SuperPolynomial(p) for p in ps])
+end
+
+function SuperPolynomialSystem(::Type{T}, ps::Vector{<:MP.AbstractPolynomialLike}) where T
+    variables = sort!(union(Iterators.flatten(MP.variables.(ps))), rev=true)
+    SuperPolynomialSystem([SuperPolynomial(T, p, variables) for p in ps])
 end
 
 

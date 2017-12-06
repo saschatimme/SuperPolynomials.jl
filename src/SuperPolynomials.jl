@@ -9,6 +9,13 @@ module SuperPolynomials
     import FixedPolynomials
     const FP = FixedPolynomials
 
+    """
+        SuperPolynomial([T, ] f::MP.AbstractPolynomial, [variables])
+
+    Construct a SuperPolynomial from f.
+
+        SuperPolynomial(f::FixedPolynomials.Polynomial)
+    """
     struct SuperPolynomial{T, NVars, NTerms, Exponents<:Val}
         coefficients::Vector{T}
     end
@@ -29,6 +36,11 @@ module SuperPolynomials
     function SuperPolynomial(p::MP.AbstractPolynomialLike, variables = MP.variables(p))
         exps, coeffs = mp_exponents_coefficients(p, variables)
         SuperPolynomial(coeffs, exps, length(variables))
+    end
+
+    function SuperPolynomial(::Type{T}, p::MP.AbstractPolynomialLike, variables = MP.variables(p)) where T
+        exps, coeffs = mp_exponents_coefficients(p, variables)
+        SuperPolynomial(convert.(T, coeffs), exps, length(variables))
     end
 
     SuperPolynomial(p::FP.Polynomial) = SuperPolynomial(p.coefficients, p.exponents)
