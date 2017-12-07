@@ -1,10 +1,15 @@
 export gradient!
 
+
+
 function grouped_derivative_factors!(as, M, NVars, j)
     is_first = true
     last_xi = :default
+    total_factors = sum(i -> M[i, j] > 0, 1:NVars-1)
+    k = 0
     for i=1:NVars-1
         if M[i, j] > 0
+            k += 1
             _xi = Symbol("_x", i)
             xi = Symbol("x", i)
             if is_first
@@ -21,6 +26,8 @@ function grouped_derivative_factors!(as, M, NVars, j)
                     push!(as, :($_xi = $e))
                 end
                 is_first = false
+            elseif k == total_factors && all(k -> M[k, j] == 0, (i + 1):NVars)
+                # This will not be used
             else
                 push!(as, :($_xi = $last_xi * $xi))
             end
@@ -30,8 +37,11 @@ function grouped_derivative_factors!(as, M, NVars, j)
 
     is_first = true
     last_yi = :default
+    total_factors = sum(i -> M[i, j] > 0, 2:NVars)
+    k = 0
     for i=NVars:-1:2
         if M[i, j] > 0
+            k += 1
             _yi = Symbol("_y", i)
             xi = Symbol("x", i)
             if is_first
@@ -48,6 +58,8 @@ function grouped_derivative_factors!(as, M, NVars, j)
                     push!(as, :($_yi = $e))
                 end
                 is_first = false
+            elseif k == total_factors && all(k -> M[k, j] == 0, 1:i - 1)
+                # This will not be used
             else
                 push!(as, :($_yi = $last_yi * $xi))
             end
@@ -146,7 +158,7 @@ Compute the gradient of `f` at `x`, i.e. `∇f(x)`, and store the result in `u`.
     gradient!(U::Matrix, f, x, i)
 
 Compute the gradient of `f` at `x`, i.e. `∇f(x)`, and store the result in the
-`i`-th row of ``.
+`i`-th row of `U`.
 """
 @generated function gradient!(u::AbstractMatrix, f::Polynomial{T, NVars, NTerms, Val{Exponents}}, x, row) where {T, NVars, NTerms, Exponents}
     gradient_impl(f, true)
