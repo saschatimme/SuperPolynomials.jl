@@ -31,7 +31,6 @@ function PolynomialSystem(::Type{T}, ps::Vector{<:MP.AbstractPolynomialLike}) wh
     PolynomialSystem([Polynomial(T, p, variables) for p in ps])
 end
 
-
 for N = 1:128
     @eval begin
         function genevaluate!($([Symbol("p", i) for i=1:N]...))

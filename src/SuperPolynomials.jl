@@ -52,7 +52,7 @@ module SuperPolynomials
     include("gradient.jl")
     include("system.jl")
 
-    export exponents
+    export exponents, coefficients, scale_coefficients!
 
     """
         exponents(f)
