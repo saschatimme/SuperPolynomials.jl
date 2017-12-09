@@ -39,4 +39,3 @@ end
 @generated function evaluate(f::Polynomial{T, NVars, NTerms, Val{Exponents}}, x) where {T, NVars, NTerms, Exponents}
     evaluate_impl(f)
 end
-Polynomial
