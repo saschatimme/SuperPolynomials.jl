@@ -92,7 +92,7 @@ function gradient_impl(f::Type{Polynomial{T, NVars, NTerms, Val{Exponents}}}, ma
                 push!(ops, :($(Symbol("x", i, "_", k))))
             end
         end
-        push!(as, :(c = $(batch_arithmetic_ops(:*, ops))))
+        push!(as, :(@inbounds c = $(batch_arithmetic_ops(:*, ops))))
 
         grouped_derivative_factors!(as, M, NVars, j)
 
@@ -148,7 +148,6 @@ function gradient_impl(f::Type{Polynomial{T, NVars, NTerms, Val{Exponents}}}, ma
 
     return Expr(:block, grouped_powers..., as..., assignmentblock, :u)
 end
-
 
 """
     gradient!(u, f, x)

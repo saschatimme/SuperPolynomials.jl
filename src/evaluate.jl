@@ -12,7 +12,7 @@ function evaluate_impl(f::Type{Polynomial{T, NVars, NTerms, Val{Exponents}}}) wh
         nmultiplications = sum(M[:, j] .> 0)
         mult_counter = 0
         if nmultiplications == 0
-            push!(as, :(out += $(factors[1])))
+            push!(as, :(@inbounds out += $(factors[1])))
         else
             for i=1:NVars
                 k = M[i, j]
@@ -21,7 +21,7 @@ function evaluate_impl(f::Type{Polynomial{T, NVars, NTerms, Val{Exponents}}}) wh
                     xik = Symbol("x", i, "_", k)
                     if mult_counter == nmultiplications
                         a = batch_arithmetic_ops(:*, factors)
-                        push!(as, :(out = muladd($a, $xik, out)))
+                        push!(as, :(@inbounds out = muladd($a, $xik, out)))
                     else
                         push!(factors, :($xik))
                     end
@@ -39,3 +39,5 @@ end
 @generated function evaluate(f::Polynomial{T, NVars, NTerms, Val{Exponents}}, x) where {T, NVars, NTerms, Exponents}
     evaluate_impl(f)
 end
+
+@inline (f::Polynomial)(x) = evaluate(f, x)
