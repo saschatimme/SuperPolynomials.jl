@@ -7,6 +7,8 @@ module SuperPolynomials
     import FixedPolynomials
     const FP = FixedPolynomials
 
+    using Nullables
+
 
     export Polynomial
     """
