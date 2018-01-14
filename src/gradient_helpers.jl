@@ -34,18 +34,26 @@ function partial_derivatives(exponents, ::Type{<:Number})
                 push!(exprs, :($(u_(last_i)) = $(batch_arithmetic_ops(:+, partials))))
                 empty!(partials)
             end
-            last_i = i
         end
         partial = u_(i, j)
-        if k == 1
+        if k == 1 && isempty(factors)
+            expr = :($(partial) = $(c_(j)))
+        elseif k == 1
             expr = :($(partial) = $(c_(j)) * $(x_(factors)))
+        elseif isempty(factors)
+            expr = :($(partial) = $k * $(c_(j)))
         else
             expr = :($(partial) = $k * $(c_(j)) * $(x_(factors)))
         end
+        last_i = i
         push!(partials, partial)
         push!(exprs, expr)
     end
 
+    if !isempty(partials)
+        push!(exprs, :($(u_(last_i)) = $(batch_arithmetic_ops(:+, partials))))
+        empty!(partials)
+    end
     exprs
 end
 
@@ -59,8 +67,12 @@ function partial_derivatives(exponents, ::Type{<:Union{Float32, Float64}})
 
     for (i, j, k, factors) in sort(list, lt=((a, b) -> a[2] < b[2]))
         ui = u_(i)
-        if k == 1
+        if k == 1 && isempty(factors)
+            expr = :($ui += $(c_(j)))
+        elseif k == 1
             expr = :($ui = muladd($(c_(j)), $(x_(factors)), $ui))
+        elseif isempty(factors)
+            expr = :($ui = muladd($k, $(c_(j)), $ui))
         else
             expr = :($ui = muladd($k * $(c_(j)), $(x_(factors)), $ui))
         end
@@ -83,12 +95,9 @@ function partial_derivatives_subfactors!(instructions, list)
             prod = batch_arithmetic_ops(:*, x_.(collect(sub)))
             operand = x_(sub)
             push!(instructions, :($(operand) = $prod))
-            if !isempty(operands)
-                push!(operands, operand)
-            end
+            push!(operands, operand)
         end
-
-        if !isempty(operands)
+        if length(operands) > 1
             push!(instructions, :($(x_(v)) = $(batch_arithmetic_ops(:*, operands))))
         end
     end
