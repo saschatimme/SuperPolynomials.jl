@@ -27,7 +27,7 @@ git:
 
 ## uncomment the following lines to override the default test script
 script:
- - julia -e 'Plg.clone("https://github.com/JuliaAlgebra/FixedPolynomials.jl.git"); Pkg.clone(pwd()); Pkg.build("SuperPolynomials"); Pkg.test("SuperPolynomials"; coverage=true)'
+ - julia -e 'Pkg.clone("https://github.com/JuliaAlgebra/FixedPolynomials.jl.git"); Pkg.clone(pwd()); Pkg.build("SuperPolynomials"); Pkg.test("SuperPolynomials"; coverage=true)'
 after_success:
   # push coverage results to Coveralls
   - julia -e 'cd(Pkg.dir("SuperPolynomials")); Pkg.add("Coverage"); using Coverage; Coveralls.submit(Coveralls.process_folder())'
