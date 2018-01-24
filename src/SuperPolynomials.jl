@@ -7,6 +7,8 @@ module SuperPolynomials
     import FixedPolynomials
     const FP = FixedPolynomials
 
+    using Nullables
+
 
     export Polynomial
     """
@@ -49,6 +51,7 @@ module SuperPolynomials
     include("utilities.jl")
     include("evaluate.jl")
     include("horner.jl")
+    include("gradient_helpers.jl")
     include("gradient.jl")
     include("system.jl")
 

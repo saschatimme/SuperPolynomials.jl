@@ -101,6 +101,41 @@ function static_pow(expr, k::Integer)
 end
 
 
+function x_(S::IntSet)
+    str = ""
+    for (i, a) in enumerate(S)
+        if i == 1
+            str *= "$(x_(a))"
+        else
+            str *= "_$(x_(a))"
+        end
+    end
+
+    Symbol(str)
+end
+x_(i::Int) = Symbol("x", i)
+x_(ik::NTuple{2, Int}) = ik[2] == 1 ? x_(ik[1]) : Symbol("x", ik[1], "_", ik[2])
+u_(i::Int) = Symbol("u", i)
+u_(i1::Int, i2::Int) = Symbol("u", i1, "_", i2)
+u_(ik::NTuple{2, Int}) = ik[2] == 1 ? u_(ik[1]) : Symbol("u", ik[1], "_", ik[2])
+c_(i::Int) = Symbol("c", i)
+
+function occuring_exponents(M::Matrix, i::Int)
+    exps = sort!(unique(M[i,:]))
+    for j=2:length(exps)
+        push!(exps, exps[j] - exps[j-1])
+    end
+    exps = sort!(unique(exps))
+    if !isempty(exps) first(exps) == 0
+        shift!(exps)
+    end
+    if !isempty(exps) && first(exps) == 1
+        shift!(exps)
+    end
+    exps
+end
+
+
 """
     group_powers(M::Matrix, NVars)
 
@@ -108,30 +143,44 @@ Create the most efficient way to compute all occuring powers.
 This assumes that the input array is `x`. The new variables have the name
 `xi_k` for ``x_i^k``.
 """
-function group_powers(M::Matrix, NVars)
-    _xs = []
-    for i = 1:NVars
-        i_exps = sort!(unique(M[i,:]))
-        if first(i_exps) == 0
-            shift!(i_exps)
+function group_powers(M::Matrix)
+    xs = []
+    for i = 1:size(M, 1)
+        exps = occuring_exponents(M, i)
+        push!(xs, :($(x_(i)) = x[$i]))
+        if isempty(exps)
+            continue
         end
-        xi = Symbol("x", i)
-        push!(_xs, :($xi = x[$i]))
-        if !isempty(i_exps)
-            last_k = first(i_exps)
-            last_xik = Symbol("x", i, "_", last_k)
-            p = static_pow(xi, last_k)
-            push!(_xs, :($last_xik = $p))
-            for k in Iterators.drop(i_exps, 1)
-                xik = Symbol("x", i, "_",k)
-                p = static_pow(xi, k - last_k)
-                push!(_xs, :($xik = $last_xik * $p))
-                last_k = k
-                last_xik = xik
+
+        last_k = exps[1]
+        last_xik = x_((i, last_k))
+        p = static_pow(x_(i), last_k)
+        push!(xs, :($last_xik = $p))
+        for j=2:length(exps)
+            k = exps[j]
+            xik = x_((i,k))
+            if _pow_already_computed(exps, k - last_k)
+                push!(xs, :($xik = $last_xik * $(x_((i, k - last_k)))))
+            else
+                p = static_pow(x_(i), k - last_k)
+                push!(xs, :($xik = $last_xik * $p))
             end
+            last_k = k
+            last_xik = xik
         end
     end
-    return _xs
+    return xs
+end
+
+function _pow_already_computed(exps, pow)
+    for k in exps
+        if k == pow
+            return true
+        elseif k > pow
+            return false
+        end
+    end
+    return false
 end
 
 """

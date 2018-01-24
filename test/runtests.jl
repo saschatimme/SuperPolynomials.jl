@@ -7,7 +7,9 @@ import DynamicPolynomials: @polyvar
 
 @testset "Evaluate, horner, gradient!" begin
     for T in [Float64, Complex128]
+        @show T
         for N=2:8
+            @show N
             M = 4*N
 
             exponents = round.(Int, 4 * rand(N, M))
@@ -25,7 +27,7 @@ import DynamicPolynomials: @polyvar
             v = zeros(T, N)
             V = zeros(T, 2, N)
             FP.gradient!(u, f, w, cfg)
-            gradient!(v, g, w)
+            @time gradient!(v, g, w)
             gradient!(V, g, w, 2)
             @test all(u .≈ v)
             @test all(u .≈ V[2,:])

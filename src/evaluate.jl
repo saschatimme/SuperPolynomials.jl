@@ -3,7 +3,7 @@ export evaluate
 function evaluate_impl(f::Type{Polynomial{T, NVars, NTerms, Val{Exponents}}}) where {T, NVars, NTerms, Exponents}
     M = convert_to_matrix(NVars, NTerms, Exponents)
 
-    grouped_powers = group_powers(M, NVars)
+    grouped_powers = group_powers(M)
 
     as = [:(out = zero($T))]
     for j = 1:NTerms
@@ -18,7 +18,7 @@ function evaluate_impl(f::Type{Polynomial{T, NVars, NTerms, Val{Exponents}}}) wh
                 k = M[i, j]
                 if k > 0
                     mult_counter += 1
-                    xik = Symbol("x", i, "_", k)
+                    xik = x_((i, k))
                     if mult_counter == nmultiplications
                         a = batch_arithmetic_ops(:*, factors)
                         push!(as, :(@inbounds out = muladd($a, $xik, out)))
