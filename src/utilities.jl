@@ -107,10 +107,21 @@ function x_(S::IntSet)
         if i == 1
             str *= "$(x_(a))"
         else
-            str *= "_$(x_(a))"
+            str *= "__$(x_(a))"
         end
     end
 
+    Symbol(str)
+end
+function x_(S::Vector{Symbol})
+    str = ""
+    for (i, a) in enumerate(S)
+        if i == 1
+            str *= "$(a)"
+        else
+            str *= "__$(a)"
+        end
+    end
     Symbol(str)
 end
 x_(i::Int) = Symbol("x", i)

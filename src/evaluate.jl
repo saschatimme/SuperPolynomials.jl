@@ -1,43 +1,56 @@
 export evaluate
 
-function evaluate_impl(f::Type{Polynomial{T, NVars, NTerms, Val{Exponents}}}) where {T, NVars, NTerms, Exponents}
+function evaluate_impl(::Type{S}, f::Type{Polynomial{T, NVars, NTerms, Val{Exponents}}}) where {S, T, NVars, NTerms, Exponents}
     M = convert_to_matrix(NVars, NTerms, Exponents)
 
-    grouped_powers = group_powers(M)
+    G = ComputeGraph()
+    pow_instr = all_powers_of_variables!(G, M)
 
-    as = [:(out = zero($T))]
-    for j = 1:NTerms
-        factors = []
-        push!(factors, :(f.coefficients[$j]))
-        nmultiplications = sum(M[:, j] .> 0)
-        mult_counter = 0
-        if nmultiplications == 0
-            push!(as, :(@inbounds out += $(factors[1])))
-        else
-            for i=1:NVars
-                k = M[i, j]
-                if k > 0
-                    mult_counter += 1
-                    xik = x_((i, k))
-                    if mult_counter == nmultiplications
-                        a = batch_arithmetic_ops(:*, factors)
-                        push!(as, :(@inbounds out = muladd($a, $xik, out)))
-                    else
-                        push!(factors, :($xik))
-                    end
-                end
-            end
-        end
+    j_prods = products_to_evaluate(M)
+    prods = last.(j_prods)
+    res = group_products!(G, prods)
+
+
+    graph_instr = construct_instructions(G, x_.(prods)) do i, name, instr
+        (:(@inbounds out = muladd(c[$(j_prods[i][1])], $instr, out)))
     end
 
     Expr(:block,
-        grouped_powers...,
-        as...,
+        :(out = zero(promote_type(S, T))),
+        :(c = f.coefficients),
+        pow_instr...,
+        graph_instr...,
         :(out))
 end
 
-@generated function evaluate(f::Polynomial{T, NVars, NTerms, Val{Exponents}}, x) where {T, NVars, NTerms, Exponents}
-    evaluate_impl(f)
+"""
+    products_to_evaluate(exponents)
+
+Compute a list of all products to evaluate in the form
+    (j, factors)
+
+where `i` is the partial derivative, `j` is the corresponding term, `k` is the factor from the derivative
+and `factors` is a vector of `Int`s with the occuring monomials.
+"""
+function products_to_evaluate(exponents)
+    out = Vector{Tuple{Int, Vector{Symbol}}}()
+    m, n = size(exponents)
+    for j=1:n
+        factors = Symbol[]
+        for l=1:m
+            k = exponents[l,j]
+            if k > 0
+                push!(factors, x_((l, k)))
+            end
+        end
+        push!(out, (j, factors))
+    end
+    out
 end
 
-@inline (f::Polynomial)(x) = evaluate(f, x)
+
+@generated function evaluate(f::Polynomial{T, NVars, NTerms, Val{Exponents}}, x::AbstractVector{S}) where {S, T, NVars, NTerms, Exponents}
+    evaluate_impl(S, f)
+end
+
+(f::Polynomial)(x) = evaluate(f, x)
