@@ -11,16 +11,15 @@ Compute the gradient of `f` at `x`, i.e. `∇f(x)`, and store the result in `u`.
 Compute the gradient of `f` at `x`, i.e. `∇f(x)`, and store the result in the
 `i`-th row of `U`.
 """
-@generated function gradient!(u::AbstractMatrix, f::Polynomial{T, NVars, NTerms, Val{Exponents}}, x, row) where {T, NVars, NTerms, Exponents}
-    gradient_impl(f, true)
+@generated function gradient!(u::AbstractMatrix{T}, f::Polynomial{S, NVars, NTerms, Val{Exponents}}, x, row) where {T, S, NVars, NTerms, Exponents}
+    gradient_impl(T, f, true)
 end
 
-@generated function gradient!(u::AbstractVector, f::Polynomial{T, NVars, NTerms, Val{Exponents}}, x) where {T, NVars, NTerms, Exponents}
-    gradient_impl(f, false)
+@generated function gradient!(u::AbstractVector{T}, f::Polynomial{S, NVars, NTerms, Val{Exponents}}, x) where {T, S, NVars, NTerms, Exponents}
+    gradient_impl(T, f, false)
 end
 
-
-function gradient_impl(f::Type{Polynomial{T, NVars, NTerms, Val{Exponents}}}, matrix_assignement=false) where {T, NVars, NTerms, Exponents}
+function gradient_impl(::Type{T}, f::Type{Polynomial{S, NVars, NTerms, Val{Exponents}}}, matrix_assignement=false) where {T, S, NVars, NTerms, Exponents}
     M = convert_to_matrix(NVars, NTerms, Exponents)
     M_reduced = max.(M .- 1, 0)
 
