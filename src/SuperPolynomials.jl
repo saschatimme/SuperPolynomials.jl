@@ -51,7 +51,6 @@ module SuperPolynomials
     include("compute_graph.jl")
     include("compute_graph_algorithms.jl")
     include("utilities.jl")
-    include("evaluate_helpers.jl")
     include("evaluate.jl")
     include("horner.jl")
     include("gradient_helpers.jl")

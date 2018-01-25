@@ -155,16 +155,16 @@ end
 
 
 """
-    construct_instructions(G::ComputeGraph, vertex_names)
+    construct_instructions(G::ComputeGraph, products)
 
-Construct the necessary instructions to compute all vertices
+Construct the necessary instructions to compute all products
 """
-function construct_instructions(f, G::ComputeGraph, vertex_names)
+function construct_instructions(f, G::ComputeGraph, products)
     computed_vertices = Set{Symbol}()
     instructions = Expr[]
-    for (i, vertex_name) in enumerate(vertex_names)
-        last_instruction = construct_sub_instructions!(instructions, computed_vertices, G, vertex_name)
-        push!(instructions, f(i, vertex_name, last_instruction))
+    for prod in products
+        last_instruction = construct_sub_instructions!(instructions, computed_vertices, G, x_(last(prod)))
+        push!(instructions, f(prod, last_instruction))
     end
     instructions
 end
@@ -175,20 +175,27 @@ function construct_sub_instructions!(instructions, computed_vertices, G::Compute
         return :($vertex_name)
     end
 
-    operands = Symbol[]
+    operands = []
     for nb in nbs
-        if nb.name ∉ computed_vertices
-            construct_sub_instructions!(instructions, computed_vertices, G, nb.name)
+        if nb.name ∉ computed_vertices && !isempty(in_neighbors(G, nb.name))
+            prod = construct_sub_instructions!(instructions, computed_vertices, G, nb.name)
+            if length(out_neighbors(G, nb.name)) > 1
+                push!(instructions, :($(nb.name) = $prod))
+                push!(operands, nb.name)
+            else
+                push!(operands, prod)
+            end
             push!(computed_vertices, nb.name)
+        else
+            push!(operands, nb.name)
         end
-        push!(operands, nb.name)
     end
 
     prod = batch_arithmetic_ops(:*, operands)
-    # we are in the recursion start
-    if !isempty(out_neighbors(G, vertex_name))
-        push!(instructions, :($vertex_name = $prod))
-    end
+    # # we are in the recursion start
+    # if length(out_neighbors(G, vertex_name))) > 1
+    #     push!(instructions, :($vertex_name = $prod))
+    # end
 
     return prod
 end

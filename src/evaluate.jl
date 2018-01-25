@@ -10,13 +10,12 @@ function evaluate_impl(::Type{S}, f::Type{Polynomial{T, NVars, NTerms, Val{Expon
     prods = last.(j_prods)
     res = group_products!(G, prods)
 
-
-    graph_instr = construct_instructions(G, x_.(prods)) do i, name, instr
-        (:(@inbounds out = muladd(c[$(j_prods[i][1])], $instr, out)))
+    graph_instr = construct_instructions(G, j_prods) do j_prod, instr
+        (:(@inbounds out = muladd(c[$(j_prod[1])], $instr, out)))
     end
 
     Expr(:block,
-        :(out = zero(promote_type(S, T))),
+        :(out = zero($(promote_type(S, T)))),
         :(c = f.coefficients),
         pow_instr...,
         graph_instr...,
