@@ -162,14 +162,15 @@ Construct the necessary instructions to compute all products
 function construct_instructions(f, G::ComputeGraph, products)
     computed_vertices = Set{Symbol}()
     instructions = Expr[]
-    for prod in products
-        last_instruction = construct_sub_instructions!(instructions, computed_vertices, G, x_(last(prod)))
+    vertices = x_.(last.(products))
+    for (vertex, prod) in zip(vertices, products)
+        last_instruction = construct_sub_instructions!(instructions, computed_vertices, G, vertex, vertices)
         push!(instructions, f(prod, last_instruction))
     end
     instructions
 end
 
-function construct_sub_instructions!(instructions, computed_vertices, G::ComputeGraph, vertex_name::Symbol)
+function construct_sub_instructions!(instructions, computed_vertices, G::ComputeGraph, vertex_name::Symbol, vertex_names)
     nbs = in_neighbors(G, vertex_name)
     if isempty(nbs) || vertex_name ∈ computed_vertices
         return :($vertex_name)
@@ -177,9 +178,12 @@ function construct_sub_instructions!(instructions, computed_vertices, G::Compute
 
     operands = []
     for nb in nbs
+        # We do need to compute only if the vertex was not computed so far
+        # or it is a leaf (no predecessor)
         if nb.name ∉ computed_vertices && !isempty(in_neighbors(G, nb.name))
-            prod = construct_sub_instructions!(instructions, computed_vertices, G, nb.name)
-            if length(out_neighbors(G, nb.name)) > 1
+            prod = construct_sub_instructions!(instructions, computed_vertices, G, nb.name, vertex_names)
+            # We avoid the explicit assignement if the product is not used anywhere else
+            if length(out_neighbors(G, nb.name)) > 1 || count(n -> n == nb.name, vertex_names) > 0
                 push!(instructions, :($(nb.name) = $prod))
                 push!(operands, nb.name)
             else
@@ -191,11 +195,5 @@ function construct_sub_instructions!(instructions, computed_vertices, G::Compute
         end
     end
 
-    prod = batch_arithmetic_ops(:*, operands)
-    # # we are in the recursion start
-    # if length(out_neighbors(G, vertex_name))) > 1
-    #     push!(instructions, :($vertex_name = $prod))
-    # end
-
-    return prod
+    batch_arithmetic_ops(:*, operands)
 end
