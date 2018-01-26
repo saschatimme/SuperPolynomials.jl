@@ -46,7 +46,7 @@ store the information the in the `ComputeGraph` `G`.
 """
 function group_products!(G, products)
     computed_values = Vector{eltype(products)}()
-    values = sort(products, lt=((a, b) -> length(a) < length(b)))
+    values = sort!(unique(products), lt=((a, b) -> length(a) < length(b)))
     for (k, v) in enumerate(values)
         if length(v) == 1
             continue
@@ -60,18 +60,22 @@ function group_products!(G, products)
         end
 
         xv = x_(v)
+        make_edges = !hasvertex(G, xv) || length(in_neighbors(G, G[xv])) == 0
+
         for w in to_compute_subsets
             xw = x_(w)
             for w_i in w
                 addedge!(G, w_i, xw)
             end
-            if xv != xw
+            # If the node is already in the graph we somehow computed it already
+            if make_edges
                 addedge!(G, xw, xv)
             end
         end
-        for w in subsets
-            xw1 = x_(w)
-            if xv != xw1
+        # If the node is already in the graph we somehow computed it already
+        if make_edges
+            for w in subsets
+                xw1 = x_(w)
                 addedge!(G, xw1, xv)
             end
         end
@@ -170,6 +174,15 @@ function construct_instructions(f, G::ComputeGraph, products)
     instructions
 end
 
+function construct_instructions!(f, instructions, computed_vertices, G::ComputeGraph, products)
+    vertices = x_.(last.(products))
+    for (vertex, prod) in zip(vertices, products)
+        last_instruction = construct_sub_instructions!(instructions, computed_vertices, G, vertex, vertices)
+        push!(instructions, f(prod, last_instruction))
+    end
+    instructions
+end
+
 function construct_sub_instructions!(instructions, computed_vertices, G::ComputeGraph, vertex_name::Symbol, vertex_names)
     nbs = in_neighbors(G, vertex_name)
     if isempty(nbs) || vertex_name ∈ computed_vertices
@@ -183,12 +196,12 @@ function construct_sub_instructions!(instructions, computed_vertices, G::Compute
         if nb.name ∉ computed_vertices && !isempty(in_neighbors(G, nb.name))
             prod = construct_sub_instructions!(instructions, computed_vertices, G, nb.name, vertex_names)
             # We avoid the explicit assignement if the product is not used anywhere else
-            if length(out_neighbors(G, nb.name)) > 1 || count(n -> n == nb.name, vertex_names) > 0
-                push!(instructions, :($(nb.name) = $prod))
-                push!(operands, nb.name)
-            else
-                push!(operands, prod)
-            end
+            # if length(out_neighbors(G, nb.name)) > 1 || count(n -> n == nb.name, vertex_names) > 0
+            push!(instructions, :($(nb.name) = $prod))
+            push!(operands, nb.name)
+            # else
+            #     push!(operands, prod)
+            # end
             push!(computed_vertices, nb.name)
         else
             push!(operands, nb.name)

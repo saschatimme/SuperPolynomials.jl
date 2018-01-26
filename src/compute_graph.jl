@@ -34,12 +34,20 @@ getvertex!(G::ComputeGraph, name::Symbol) = addvertex!(G, name)
 Base.getindex(G::ComputeGraph, name::Symbol) = getvertex!(G, name)
 
 function addedge!(G::ComputeGraph, from::Symbol, to::Symbol)
+    if from == to
+        return false
+    end
     v_from = getvertex!(G, from)
     v_to = getvertex!(G, to)
 
     LG.add_edge!(G.graph, LG.Edge(v_from.id, v_to.id))
 end
-addedge!(G::ComputeGraph, from::Vertex, to::Vertex) = LG.add_edge!(G.graph, LG.Edge(from.id, to.id))
+function addedge!(G::ComputeGraph, from::Vertex, to::Vertex)
+    if from.name == to.name
+        return false
+    end
+    LG.add_edge!(G.graph, LG.Edge(from.id, to.id))
+end
 
 in_neighbors(G::ComputeGraph, n::Symbol) = in_neighbors(G, G[n])
 function in_neighbors(G::ComputeGraph, v::Vertex)
