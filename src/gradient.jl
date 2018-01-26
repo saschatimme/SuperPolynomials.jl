@@ -36,11 +36,7 @@ function new_gradient_impl(::Type{T}, f::Type{Polynomial{S, NVars, NTerms, Val{E
         end
         for ijk_prod in sub_ijk_prods
             i, j, k, prod = ijk_prod
-            # if isempty(prod)
-            #     push!(graph_instr, :($(u_(i, j)) = $(k) * c[$j]))
-            # else
             push!(graph_instr, :(@inbounds $(u_(i, j)) = $(k) * $(x_(prod))))
-            # end
             push!(summations, u_(i, j))
         end
         if !isempty(summations)
@@ -49,18 +45,12 @@ function new_gradient_impl(::Type{T}, f::Type{Polynomial{S, NVars, NTerms, Val{E
         end
     end
 
-    # additions = []
-    # for i=1:NVars
-    #     push!(additions, :($(u_(i)) = $(batch_arithmetic_ops(:+, u_summations[i]))))
-    # end
-
     assignments = [:(u[$i] = $(u_(i))) for i=1:size(exponents, 1)]
 
     Expr(:block,
         init...,
         pow_instr...,
         graph_instr...,
-        # additions...,
         assignments...,
         :(u))
 end
@@ -82,13 +72,16 @@ function gradient_products_to_evaluate!(G, exponents, reduced_exponents)
                 push!(ops, x_((i, k)))
             end
         end
-        push!(ops, Symbol("c", j))
         base_term = x_(ops)
         for op in ops
             addedge!(G, op, base_term)
         end
-
-        # addedge!(G, Symbol("c", j), base_term)
+        cj = Symbol("c", j)
+        push!(ops, cj)
+        base_term_old = base_term
+        base_term = x_(ops)
+        addedge!(G, cj, base_term)
+        addedge!(G, base_term_old, base_term)
 
         # now we have to handle all partial derivatives
         for i=1:m
@@ -134,7 +127,6 @@ function gradient_products_to_evaluate!(G, exponents, reduced_exponents)
 
 
         empty!(ops)
-        # push!(terms, term)
     end
     # terms
     out, out_factors

@@ -11,8 +11,8 @@ function evaluate_impl(::Type{S}, f::Type{Polynomial{T, NVars, NTerms, Val{Expon
     res = group_products!(G, prods)
 
     graph_instr = construct_instructions(G, j_prods) do j_prod, instr
-        if isempty(last(j_prods))
-            :(out = c[$(j_prod[1])])
+        if isempty(last(j_prod))
+            :(@inbounds out += c[$(j_prod[1])])
         else
             (:(@inbounds out = muladd(c[$(j_prod[1])], $instr, out)))
         end
