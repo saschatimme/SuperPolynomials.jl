@@ -48,12 +48,14 @@ module SuperPolynomials
     Polynomial(p::FP.Polynomial) = Polynomial(p.coefficients, p.exponents)
 
     include("promotion_conversion.jl")
+    include("compute_graph.jl")
+    include("compute_graph_algorithms.jl")
     include("utilities.jl")
     include("evaluate.jl")
     include("horner.jl")
-    include("gradient_helpers.jl")
     include("gradient.jl")
     include("system.jl")
+
 
     export exponents, coefficients, scale_coefficients!
 
