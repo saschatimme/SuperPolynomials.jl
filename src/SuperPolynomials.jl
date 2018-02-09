@@ -9,6 +9,44 @@ module SuperPolynomials
 
     using Nullables
 
+    const VALUES = Dict{Symbol, Matrix}()
+
+    struct DictPoly{T, ID}
+        coefficients::Vector{T}
+    end
+
+    function DictPoly(coefficients::Vector{T}, matrix) where T
+        symb = Base.gensym()
+        # _addvalue(symb, matrix)
+        _all_addvalue(symb, matrix)
+        # push!(VALUES, symb => matrix)
+        DictPoly{T, symb}(coefficients)
+    end
+
+    function _all_addvalue(id, M)
+        n = nprocs()
+        @sync begin
+            for p=1:n
+                @async begin
+                    remotecall_fetch(_addvalue, p, id, M)
+                end
+            end
+        end
+    end
+
+    function _addvalue(id, M)
+        println("add", id)
+        push!(VALUES, id => M)
+    end
+
+    function evaluate_impl(::Type{T}, f::Type{DictPoly{S, ID}}) where {S, T, ID}
+        M = VALUES[ID]
+        evaluate_impl(promote_type(S, T), M)
+    end
+
+    @generated function dict_evaluate(f::DictPoly{S, ID}, x::AbstractVector{T}) where {S, T, ID}
+        evaluate_impl(promote_type(T, S), f)
+    end
 
     export Polynomial
     """
