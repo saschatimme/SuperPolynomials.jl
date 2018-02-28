@@ -55,7 +55,8 @@ function horner_impl(f::Type{Polynomial{T, NVars, NTerms, Val{Exponents}}}) wher
     xpowers = [Vector{Int}() for _=1:d_I]
 
     _xs = []
-    push!(_xs, :(r0 = f.coefficients[$(P[1])]))
+    push!(_xs, :(coefficients = f.coefficients))
+    push!(_xs, :(@inbounds r0 = coefficients[$(P[1])]))
     r0_zero = false
     last_k = 0
     l = 2
@@ -120,7 +121,7 @@ function horner_impl(f::Type{Polynomial{T, NVars, NTerms, Val{Exponents}}}) wher
         end
         rs_zero[k] = false
         if l ≤ NTerms && I[n] == E[P[l]]
-            push!(_xs, :(r0 = f.coefficients[$(P[l])]))
+            push!(_xs, :(@inbounds r0 = coefficients[$(P[l])]))
             r0_zero = false
             l += 1
         else
@@ -148,7 +149,7 @@ function horner_impl(f::Type{Polynomial{T, NVars, NTerms, Val{Exponents}}}) wher
             push!(_ps, :($xi = x[$i]))
             last_xik = Symbol("x", i, "_", last_k)
             if last_k > 1
-                push!(_ps, :($last_xik = pow($xi, $last_k)))
+                push!(_ps, :($last_xik = $(static_pow(xi, last_k))))
             else
                 push!(_ps, :($last_xik = $xi))
             end
